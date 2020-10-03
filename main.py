@@ -1,6 +1,7 @@
 import csv
 import boto3
 import time
+import datetime
 from botocore.config import Config
 
 from case import Case
@@ -18,7 +19,8 @@ def read_csv(file_path):
                 print(f'Column names are {", ".join(row)}')
                 line_count += 1
             else:
-                case = Case(row[1], row[4], row[5], row[6], row[7], row[10])
+                case = Case(row[1], row[4], row[5], row[6],
+                            convert_datetime_to_timestamp(row[7]), row[10])
                 line_count += 1
                 cases_list.append(case)
     # print(f'Processed {len(cases_list)} lines.')
@@ -37,7 +39,19 @@ def write_records(records):
         print("Error:", err)
 
 
+def is_blank(value):
+    if value and value.strip():
+        return False
+    return True
+
+
+def convert_datetime_to_timestamp(current_time):
+    return int(time.mktime(datetime.datetime.strptime(current_time, "%Y-%m-%d %H:%M:%S").timetuple()))
+
+
 def prepare_record(measure_name, measure_value, time, dimensions):
+    if is_blank(measure_value):
+        measure_value = 0
     record = {
         'Time': str(time),
         'Dimensions': dimensions,
@@ -50,37 +64,40 @@ def prepare_record(measure_name, measure_value, time, dimensions):
 
 def start_data_ingestion():
     records = []
+    count = 0
+    while True:
+        for record in cases_list:
+            country = record.country
+            confirmed_cases = record.confirmed_cases
+            deaths = record.deaths
+            recovered = record.recovered
+            update_time = record.update_time
+            region = record.region
 
-    for record in cases_list:
-        country = record.country
-        confirmed_cases = record.confirmed_cases
-        deaths = record.deaths
-        recovered = record.recovered
-        update_time = record.update_time
-        region = record.region
+            dimensions = [
+                {'Name': 'country', 'Value': country},
+                {'Name': 'region', 'Value': region}
+            ]
+            # records.append(prepare_record('country', country, update_time, dimensions))
+            records.append(prepare_record('confirmed_cases', confirmed_cases, update_time, dimensions))
+            records.append(prepare_record('deaths', deaths, update_time, dimensions))
+            records.append(prepare_record('recovered', recovered, update_time, dimensions))
 
-        dimensions = [
-            {'Name': 'country', 'Value': country},
-            {'Name': 'region', 'Value': region}
-        ]
+            print("records {} - country {} - confirmed_cases {} - deaths {} - recovered {}".format(
+                len(records), country, confirmed_cases,
+                deaths, recovered))
+            count = count + 1
+            print("processed record = ", count)
 
-        # records.append(prepare_record('country', country, update_time, dimensions))
-        records.append(prepare_record('confirmed_cases', confirmed_cases, update_time, dimensions))
-        records.append(prepare_record('deaths', deaths, update_time, dimensions))
-        records.append(prepare_record('recovered', recovered, update_time, dimensions))
-
-        # print("records {} - country {} - confirmed_cases {} - deaths {} - recovered {}".format(
-        #     len(records), country, confirmed_cases,
-        #     deaths, recovered))
-
-        if len(records) == 100:
-            write_records(records)
-            records = []
-        time.sleep(INTERVAL)
+            if len(records) == 99:
+                print("sending write request")
+                write_records(records)
+                records = []
+            time.sleep(INTERVAL)
 
 
 if __name__ == '__main__':
-    read_csv('/Users/szafar/PycharmProjects/timeseries-covid/COVID-19_geo_timeseries.csv')
+    read_csv('/Users/szafar/PycharmProjects/timeseries-covid/COVID-19_sample.csv')
 
     session = boto3.Session(profile_name="playground")
     write_client = session.client('timestream-write', config=Config(
