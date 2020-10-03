@@ -9,7 +9,6 @@ from case import Case
 cases_list = []
 INTERVAL = 1  # Seconds
 
-
 def read_csv(file_path):
     with open(file_path, newline='') as csvfile:
         csv_reader = csv.reader(csvfile, delimiter=',')
@@ -51,20 +50,19 @@ def convert_datetime_to_timestamp(current_time):
 
 def prepare_record(measure_name, measure_value, time, dimensions):
     if is_blank(measure_value):
-        measure_value = 0
+        measure_value = 0.0
     record = {
         'Time': str(time),
         'Dimensions': dimensions,
         'MeasureName': measure_name,
-        'MeasureValue': str(measure_value),
-        'MeasureValueType': 'BIGINT'
+        'MeasureValue': str(float(measure_value)),
+        'MeasureValueType': 'DOUBLE'
     }
     return record
 
 
 def start_data_ingestion():
     records = []
-    count = 0
     while True:
         for record in cases_list:
             country = record.country
@@ -86,8 +84,6 @@ def start_data_ingestion():
             print("records {} - country {} - confirmed_cases {} - deaths {} - recovered {}".format(
                 len(records), country, confirmed_cases,
                 deaths, recovered))
-            count = count + 1
-            print("processed record = ", count)
 
             if len(records) == 99:
                 print("sending write request")
