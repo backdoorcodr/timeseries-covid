@@ -6,6 +6,7 @@ from case import Case
 
 cases_list = []
 
+
 def read_csv(file_path):
     with open(file_path, newline='') as csvfile:
         csv_reader = csv.reader(csvfile, delimiter=',')
@@ -20,13 +21,11 @@ def read_csv(file_path):
                 cases_list.append(case)
     print(f'Processed {len(cases_list)} lines.')
 
+
 def write_records(records):
-    session = boto3.Session()
-    write_client = session.client('timestream-write', config=Config(
-        read_timeout=20, max_pool_connections=5000, retries={'max_attempts': 10}))
     try:
-        result = write_client.write_records(DatabaseName="DATABASE_NAME",
-                                            TableName="TABLE_NAME",
+        result = write_client.write_records(DatabaseName="covid-timeseries",
+                                            TableName="timeseries-sample",
                                             Records=records,
                                             CommonAttributes={})
         status = result['ResponseMetadata']['HTTPStatusCode']
@@ -34,6 +33,7 @@ def write_records(records):
               (len(records), status))
     except Exception as err:
         print("Error:", err)
+
 
 def prepare_record(measure_name, measure_value, time, dimensions):
     record = {
@@ -45,8 +45,8 @@ def prepare_record(measure_name, measure_value, time, dimensions):
     }
     return record
 
-def prepare_record():
 
+def start_data_ingestion():
     records = []
 
     for record in cases_list:
@@ -70,6 +70,9 @@ def prepare_record():
             len(records), country, confirmed_cases,
             deaths, recovered))
 
+        if len(records) == 100:
+            write_records(records)
+            records = []
 
 
 if __name__ == '__main__':
@@ -81,5 +84,4 @@ if __name__ == '__main__':
     query_client = session.client('timestream-query')
 
     while True:
-        prepare_record()
-
+        start_data_ingestion()
