@@ -1,10 +1,12 @@
 import csv
 import boto3
+import time
 from botocore.config import Config
 
 from case import Case
 
 cases_list = []
+INTERVAL = 1  # Seconds
 
 
 def read_csv(file_path):
@@ -19,7 +21,7 @@ def read_csv(file_path):
                 case = Case(row[1], row[4], row[5], row[6], row[7], row[10])
                 line_count += 1
                 cases_list.append(case)
-    print(f'Processed {len(cases_list)} lines.')
+    # print(f'Processed {len(cases_list)} lines.')
 
 
 def write_records(records):
@@ -41,7 +43,7 @@ def prepare_record(measure_name, measure_value, time, dimensions):
         'Dimensions': dimensions,
         'MeasureName': measure_name,
         'MeasureValue': str(measure_value),
-        'MeasureValueType': 'DOUBLE'
+        'MeasureValueType': 'BIGINT'
     }
     return record
 
@@ -54,25 +56,27 @@ def start_data_ingestion():
         confirmed_cases = record.confirmed_cases
         deaths = record.deaths
         recovered = record.recovered
-        update_time = record.recovered
+        update_time = record.update_time
         region = record.region
 
         dimensions = [
+            {'Name': 'country', 'Value': country},
             {'Name': 'region', 'Value': region}
         ]
 
-        records.append(prepare_record('country', country, update_time, dimensions))
+        # records.append(prepare_record('country', country, update_time, dimensions))
         records.append(prepare_record('confirmed_cases', confirmed_cases, update_time, dimensions))
         records.append(prepare_record('deaths', deaths, update_time, dimensions))
         records.append(prepare_record('recovered', recovered, update_time, dimensions))
 
-        print("records {} - country {} - confirmed_cases {} - deaths {} - recovered {}".format(
-            len(records), country, confirmed_cases,
-            deaths, recovered))
+        # print("records {} - country {} - confirmed_cases {} - deaths {} - recovered {}".format(
+        #     len(records), country, confirmed_cases,
+        #     deaths, recovered))
 
         if len(records) == 100:
             write_records(records)
             records = []
+        time.sleep(INTERVAL)
 
 
 if __name__ == '__main__':
