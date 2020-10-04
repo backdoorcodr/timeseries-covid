@@ -45,7 +45,15 @@ def is_blank(value):
 
 
 def convert_datetime_to_timestamp(current_time):
-    timestamp = time.mktime(time.strptime(current_time, "%Y-%m-%d %H:%M:%S"))
+    try:
+        timestamp = time.mktime(time.strptime(current_time, "%Y-%m-%d %H:%M:%S"))
+    except:
+        try:
+            print('trying another date format to fetch date tuple')
+            timestamp = time.mktime(time.strptime(current_time, "%Y-%m-%d %H:%M"))
+        except:
+            print('trying another date format to fetch date tuple')
+            timestamp = time.mktime(time.strptime(current_time, "%m/%d/%Y %H:%M"))
     return int(timestamp * 1000)
 
 
