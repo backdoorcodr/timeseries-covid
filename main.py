@@ -43,19 +43,14 @@ def is_blank(value):
         return False
     return True
 
-
 def convert_datetime_to_timestamp(current_time):
-    try:
-        timestamp = time.mktime(time.strptime(current_time, "%Y-%m-%d %H:%M:%S"))
-    except:
+    for time_format in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%m/%d/%Y %H:%M'):
         try:
-            print('trying another date format to fetch date tuple')
-            timestamp = time.mktime(time.strptime(current_time, "%Y-%m-%d %H:%M"))
-        except:
-            print('trying another date format to fetch date tuple')
-            timestamp = time.mktime(time.strptime(current_time, "%m/%d/%Y %H:%M"))
-    return int(timestamp * 1000)
-
+            timestamp = time.mktime(time.strptime(current_time, time_format))
+            return int(timestamp * 1000)
+        except ValueError:
+            pass
+    raise ValueError('no valid date format found')
 
 def prepare_record(measure_name, measure_value, update_time, dimensions):
     if is_blank(measure_value):
@@ -97,7 +92,7 @@ def start_data_ingestion():
                 print("sending write request")
                 write_records(records)
                 records = []
-            time.sleep(INTERVAL)
+            # time.sleep(INTERVAL)
 
 
 if __name__ == '__main__':
