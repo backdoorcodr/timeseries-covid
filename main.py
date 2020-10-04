@@ -37,6 +37,7 @@ def write_records(records):
     except Exception as err:
         print("Error:", err)
 
+
 def is_blank(value):
     if value and value.strip():
         return False
@@ -44,8 +45,8 @@ def is_blank(value):
 
 
 def convert_datetime_to_timestamp(current_time):
-    timestamp = time.mktime(datetime.datetime.strptime(current_time, "%Y-%m-%d %H:%M:%S").timetuple())
-    return int(timestamp)
+    timestamp = time.mktime(time.strptime(current_time, "%Y-%m-%d %H:%M:%S"))
+    return int(timestamp * 1000)
 
 
 def prepare_record(measure_name, measure_value, update_time, dimensions):
@@ -76,7 +77,6 @@ def start_data_ingestion():
                 {'Name': 'country', 'Value': country},
                 {'Name': 'region', 'Value': region}
             ]
-            # records.append(prepare_record('country', country, update_time, dimensions))
             records.append(prepare_record('confirmed_cases', confirmed_cases, update_time, dimensions))
             records.append(prepare_record('deaths', deaths, update_time, dimensions))
             records.append(prepare_record('recovered', recovered, update_time, dimensions))
@@ -93,7 +93,7 @@ def start_data_ingestion():
 
 
 if __name__ == '__main__':
-    read_csv('/Users/szafar/PycharmProjects/timeseries-covid/COVID-19_sample.csv')
+    read_csv('/Users/szafar/PycharmProjects/timeseries-covid/COVID-19_geo_timeseries.csv')
 
     session = boto3.Session(profile_name="playground")
     write_client = session.client('timestream-write', config=Config(
